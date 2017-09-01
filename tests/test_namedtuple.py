@@ -14,7 +14,7 @@ import unittest
 from cnamedtuple import namedtuple
 
 
-TestNT = namedtuple('TestNT', 'x y z')    # type used for pickle tests
+NTTester = namedtuple('NTTester', 'x y z')    # type used for pickle tests
 
 
 class TestNamedTuple(unittest.TestCase):
@@ -155,7 +155,7 @@ class TestNamedTuple(unittest.TestCase):
         self.assertEqual(b._fields, tuple(names))
 
     def test_pickle(self):
-        p = TestNT(x=10, y=20, z=30)
+        p = NTTester(x=10, y=20, z=30)
         for module in (pickle,):
             loads = getattr(module, 'loads')
             dumps = getattr(module, 'dumps')
@@ -166,7 +166,7 @@ class TestNamedTuple(unittest.TestCase):
                 self.assertNotIn(b'OrderedDict', dumps(p, protocol))
 
     def test_copy(self):
-        p = TestNT(x=10, y=20, z=30)
+        p = NTTester(x=10, y=20, z=30)
         for copier in copy.copy, copy.deepcopy:
             q = copier(p)
             self.assertEqual(p, q)
@@ -188,7 +188,6 @@ class TestNamedTuple(unittest.TestCase):
         class B(A):
             pass
         self.assertEqual(repr(B(1)), 'B(x=1)')
-
 
     def test_namedtuple_subclass_issue_24931(self):
         class Point(namedtuple('_Point', ['x', 'y'])):
