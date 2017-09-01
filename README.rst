@@ -211,6 +211,21 @@ Before submitting a patch, please make sure your Python code is
 c code is `PEP7 <https://www.python.org/dev/peps/pep-0007/>`__
 compliant.
 
+Running Tests
+-------------
+
+This project uses `tox` to execute tests against multiple interpreters. To run the full test suite use:
+
+.. code::
+
+   $ tox
+
+or to target a specific environment use:
+
+.. code::
+
+   $ tox -e py27
+
 Contact
 -------
 
