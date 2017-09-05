@@ -8,6 +8,13 @@ typedef struct{
     PyObject *asdict;     /* The constructor called from `_asdict`. */
 }module_state;
 
+#if PY_MAJOR_VERSION >= 3
+#define GET_STATE(m) ((module_state*)PyModule_GetState(m))
+#else
+static module_state _state;
+#define GET_STATE(m) (&_state)
+#endif
+
 /* The type of the descriptors that access the named fields of the `namedtuple`
    types. */
 typedef struct{
@@ -1103,7 +1110,7 @@ namedtuple_factory(PyObject *self,PyObject *args,PyObject *kwargs)
         "rename",
         NULL,
     };
-    module_state *st = PyModule_GetState(self);
+    module_state *st = GET_STATE(self);
     PyObject *typename = NULL;
     PyObject *field_names = NULL;
     int rename = 0;
@@ -1252,7 +1259,7 @@ namedtuple_factory(PyObject *self,PyObject *args,PyObject *kwargs)
 static PyObject *
 _register_asdict(PyObject *self, PyObject *asdict)
 {
-    module_state *st = PyModule_GetState(self);
+    module_state *st = GET_STATE(self);
 
     Py_DECREF(st->asdict);
     Py_INCREF(asdict);
@@ -1301,10 +1308,11 @@ PyMethodDef _namedtuple_methods[] = {
     {NULL},
 };
 
+#if PY_MAJOR_VERSION >= 3
 static int
 module_traverse(PyObject *self,visitproc visit,void *arg)
 {
-    module_state *st = PyModule_GetState(self);
+    module_state *st = GET_STATE(self);
 
     if (!st) {
         return 1;
@@ -1316,7 +1324,7 @@ module_traverse(PyObject *self,visitproc visit,void *arg)
 
 static int
 module_clear(PyObject *self) {
-    module_state *st = PyModule_GetState(self);
+    module_state *st = GET_STATE(self);
 
     if (!st) {
         return 1;
@@ -1328,7 +1336,7 @@ module_clear(PyObject *self) {
 
 void
 module_free(PyObject *self) {
-    module_state *st = PyModule_GetState(self);
+    module_state *st = GET_STATE(self);
 
     if (!st) {
         return;
@@ -1337,6 +1345,7 @@ module_free(PyObject *self) {
     Py_XDECREF(st->iskeyword);
     Py_XDECREF(st->asdict);
 }
+#endif
 
 PyDoc_STRVAR(module_doc,
 "High performance data structures.\n\
@@ -1356,6 +1365,7 @@ static struct PyMethodDef module_functions[] = {
     {NULL},
 };
 
+#if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef _namedtuplemodule = {
     PyModuleDef_HEAD_INIT,
     "_namedtuple",
@@ -1368,28 +1378,40 @@ static struct PyModuleDef _namedtuplemodule = {
     (freefunc) module_free,
 };
 
+#define EMPTY_RETURN return NULL
+
 PyMODINIT_FUNC
 PyInit__namedtuple(void)
+#else
+#define EMPTY_RETURN return
+
+void
+initnamedtuple(void)
+#endif
 {
     PyObject *m;
     PyObject *keyword_mod;
     module_state *st;
 
     if (PyType_Ready(&namedtuple_indexer_type) < 0) {
-        return NULL;
+        EMPTY_RETURN;
     }
     if (PyType_Ready(&namedtuple_descr_wrapper_type) < 0) {
-        return NULL;
+        EMPTY_RETURN;
     }
 
+#if PY_MAJOR_VERSION >= 3
     if (!(m = PyModule_Create(&_namedtuplemodule))) {
-        return NULL;
+#else
+    if (!(m = Py_InitModule("namedtuple", namedtuple_methods))) {
+#endif
+        EMPTY_RETURN;
     }
 
-    if (!(st = PyModule_GetState(m))) {
-        PyErr_SetString(PyExc_SystemError,"Module state is NULL");
+    if (!(st = GET_STATE(m))) {
+        PyErr_SetString(PyExc_SystemError, "Module state is NULL");
         Py_DECREF(m);
-        return NULL;
+        EMPTY_RETURN;
     }
 
     st->asdict = (PyObject*) &PyDict_Type;
@@ -1397,14 +1419,16 @@ PyInit__namedtuple(void)
 
     if (!(keyword_mod = PyImport_ImportModule("keyword"))) {
         Py_DECREF(m);
-        return NULL;
+        EMPTY_RETURN;
     }
     st->iskeyword = PyObject_GetAttrString(keyword_mod, "iskeyword");
     Py_DECREF(keyword_mod);
     if (!st->iskeyword) {
         Py_DECREF(m);
-        return NULL;
+        EMPTY_RETURN;
     }
 
+#if PY_MAJOR_VERSION >= 3
     return m;
+#endif
 }
